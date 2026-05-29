@@ -1,0 +1,98 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #08090a;
+  --panel: #0f1011;
+  --surface: rgba(255, 255, 255, 0.035);
+  --surface-strong: rgba(255, 255, 255, 0.055);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-soft: rgba(255, 255, 255, 0.05);
+  --text: #f7f8f8;
+  --muted: #8a8f98;
+  --subtle: #62666d;
+  --accent: #7170ff;
+  --accent-bg: #5e6ad2;
+  --danger: #ef4444;
+  --warn: #f59e0b;
+  --ok: #10b981;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Pretendard, Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.58;
+  letter-spacing: -0.01em;
+  font-feature-settings: "cv01", "ss03";
+}
+
+body {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(113, 112, 255, 0.16), transparent 28rem),
+    radial-gradient(circle at 88% 8%, rgba(16, 185, 129, 0.08), transparent 22rem),
+    var(--bg);
+}
+
+h1, h2, h3, p, a, button, input, textarea, label, span, li, th, td, code, pre {
+  font-size: 12px;
+  line-height: 1.58;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(113, 112, 255, 0.35);
+}
+
+.shell {
+  width: min(1180px, calc(100vw - 32px));
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 20px 80px rgba(0,0,0,0.22);
+}
+
+.panel-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.text-muted { color: var(--muted); }
+.text-subtle { color: var(--subtle); }
+.text-accent { color: var(--accent); }
+
+.markdown-report {
+  white-space: pre-wrap;
+  color: #d0d6e0;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.62;
+  letter-spacing: -0.01em;
+}

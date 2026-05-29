@@ -1,0 +1,1 @@
+"""Megalopa analyzer package."""
