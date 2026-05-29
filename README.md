@@ -22,6 +22,12 @@ npm run analyze:sample
 npm run dev
 ```
 
+Local URL:
+
+```text
+http://127.0.0.1:3100
+```
+
 ## Test
 
 ```bash
