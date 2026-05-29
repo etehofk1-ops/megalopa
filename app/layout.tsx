@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Megalopa",
-  description: "Ontology QA layer for OpenCrab packs",
+  description: "OpenCrab 팩 신뢰도 분석 도구",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

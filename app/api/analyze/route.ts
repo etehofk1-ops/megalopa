@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { gradeLabel, issueMessage, issueSuggestion, riskLabel, targetTypeLabel } from "@/lib/reportView";
 
 const REQUIRED_PACK_FIELDS = ["id", "title", "version", "description"];
 const ALLOWED_RELATIONS = new Set([
@@ -79,7 +80,7 @@ function validateSchema(pack: Pack): Issue[] {
   const issues: Issue[] = [];
   for (const field of REQUIRED_PACK_FIELDS) {
     if (!pack[field as keyof Pack]) {
-      issues.push(makeIssue("SCHEMA_MISSING_PACK_FIELD", "error", "schema", "pack", pack.id ?? "unknown", `Pack is missing required field '${field}'.`, `Add '${field}' to the pack metadata.`));
+      issues.push(makeIssue("SCHEMA_MISSING_PACK_FIELD", "error", "schema", "pack", pack.id ?? "unknown", `팩에 필수 정보 '${field}'가 없습니다.`, `팩 기본 정보에 '${field}'를 추가하세요.`));
     }
   }
 
@@ -94,18 +95,18 @@ function validateSchema(pack: Pack): Issue[] {
 
   for (const [nodeId, count] of counts.entries()) {
     if (count > 1) {
-      issues.push(makeIssue("SCHEMA_DUPLICATE_NODE_ID", "error", "schema", "node", nodeId, `Node id '${nodeId}' appears ${count} times.`, "Use globally unique node IDs within each pack."));
+      issues.push(makeIssue("SCHEMA_DUPLICATE_NODE_ID", "error", "schema", "node", nodeId, `노드 ID '${nodeId}'가 ${count}번 나옵니다.`, "각 노드가 고유한 ID를 갖도록 정리하세요."));
     }
   }
 
   for (const node of nodes) {
     const nid = node.id ?? "unknown";
     if (!node.evidence_ids?.length) {
-      issues.push(makeIssue("EVIDENCE_MISSING_NODE", "warning", "evidence", "node", nid, "Node has no evidence references.", "Attach at least one evidence item or lower the node confidence."));
+      issues.push(makeIssue("EVIDENCE_MISSING_NODE", "warning", "evidence", "node", nid, "이 노드에 연결된 근거가 없습니다.", "노드에 근거를 연결하거나 신뢰도를 낮춰 표시하세요."));
     }
     for (const ev of node.evidence_ids ?? []) {
       if (!evidenceIds.has(ev)) {
-        issues.push(makeIssue("EVIDENCE_NODE_REFERENCE_MISSING", "error", "evidence", "node", nid, `Node references missing evidence '${ev}'.`, "Create the evidence object or remove the reference."));
+        issues.push(makeIssue("EVIDENCE_NODE_REFERENCE_MISSING", "error", "evidence", "node", nid, `노드가 존재하지 않는 근거 '${ev}'를 참조합니다.`, "근거 항목을 추가하거나 잘못된 참조를 제거하세요."));
       }
     }
   }
@@ -115,28 +116,28 @@ function validateSchema(pack: Pack): Issue[] {
     const source = edge.source_node_id;
     const target = edge.target_node_id;
     if (!nodeIdSet.has(source)) {
-      issues.push(makeIssue("SCHEMA_EDGE_SOURCE_MISSING", "error", "schema", "edge", eid, `Edge source '${source}' does not reference an existing node.`, "Point source_node_id to an existing node."));
+      issues.push(makeIssue("SCHEMA_EDGE_SOURCE_MISSING", "error", "schema", "edge", eid, `관계의 출발 노드 '${source}'가 팩 안에 없습니다.`, "source_node_id가 실제 노드를 가리키도록 수정하세요."));
     }
     if (!nodeIdSet.has(target)) {
-      issues.push(makeIssue("SCHEMA_EDGE_TARGET_MISSING", "error", "schema", "edge", eid, `Edge target '${target}' does not reference an existing node.`, "Point target_node_id to an existing node."));
+      issues.push(makeIssue("SCHEMA_EDGE_TARGET_MISSING", "error", "schema", "edge", eid, `관계의 도착 노드 '${target}'가 팩 안에 없습니다.`, "target_node_id가 실제 노드를 가리키도록 수정하세요."));
     }
     if (!edge.evidence_ids?.length) {
-      issues.push(makeIssue("EVIDENCE_MISSING_EDGE", "error", "evidence", "edge", eid, "Edge has no evidence references.", "Edges should include evidence before they are used for agent reasoning."));
+      issues.push(makeIssue("EVIDENCE_MISSING_EDGE", "error", "evidence", "edge", eid, "이 관계에 연결된 근거가 없습니다.", "관계는 추론에 직접 쓰이므로 근거를 연결한 뒤 사용하세요."));
     }
     for (const ev of edge.evidence_ids ?? []) {
       if (!evidenceIds.has(ev)) {
-        issues.push(makeIssue("EVIDENCE_EDGE_REFERENCE_MISSING", "error", "evidence", "edge", eid, `Edge references missing evidence '${ev}'.`, "Create the evidence object or remove the reference."));
+        issues.push(makeIssue("EVIDENCE_EDGE_REFERENCE_MISSING", "error", "evidence", "edge", eid, `관계가 존재하지 않는 근거 '${ev}'를 참조합니다.`, "근거 항목을 추가하거나 잘못된 참조를 제거하세요."));
       }
     }
     const relation = edge.relation_type;
     if (relation && !ALLOWED_RELATIONS.has(relation) && !STRONG_RELATION_ALTERNATIVES[relation]) {
-      issues.push(makeIssue("RELATION_UNSUPPORTED_TYPE", "warning", "relation", "edge", eid, `Relation type '${relation}' is not in the supported vocabulary.`, "Map this relation to a documented vocabulary term.", { current_relation: relation }));
+      issues.push(makeIssue("RELATION_UNSUPPORTED_TYPE", "warning", "relation", "edge", eid, `관계 표현 '${relation}'은 아직 지원 목록에 없습니다.`, "표준 관계 목록에 있는 표현으로 바꾸거나 검토 메모를 남기세요.", { current_relation: relation }));
     }
   }
 
   for (const item of evidenceItems) {
     if (!item.source_type || ["unknown", "llm_generated"].includes(item.source_type)) {
-      issues.push(makeIssue("PROVENANCE_WEAK_SOURCE", "warning", "provenance", "evidence", item.id ?? "unknown", "Evidence source type is weak or unknown.", "Prefer official docs, papers, books, or traceable articles."));
+      issues.push(makeIssue("PROVENANCE_WEAK_SOURCE", "warning", "provenance", "evidence", item.id ?? "unknown", "출처 종류가 약하거나 알 수 없습니다.", "공식 문서, 논문, 책, 추적 가능한 기사 같은 출처로 보강하세요."));
     }
   }
   return issues;
@@ -151,8 +152,8 @@ function findStrongRelations(pack: Pack): Issue[] {
       "relation",
       "edge",
       edge.id ?? "unknown",
-      `Relation '${edge.relation_type}' is strong and may overstate causality or certainty.`,
-      "Use a weaker relation unless high-quality evidence supports the strong claim.",
+      `관계 표현 '${edge.relation_type}'이 너무 단정적일 수 있습니다.`,
+      "충분한 근거가 없다면 더 약한 관계 표현으로 바꾸세요.",
       { current_relation: edge.relation_type, suggested_relation: STRONG_RELATION_ALTERNATIVES[edge.relation_type] },
     ));
 }
@@ -169,8 +170,8 @@ function detectBiasNaming(pack: Pack): Issue[] {
       "bias",
       targetType,
       targetId,
-      `Name '${label}' may stigmatize or overgeneralize a group or behavior.`,
-      "Use neutral, behavior-centered naming instead of identity- or insult-centered wording.",
+      `이름 '${label}'이 낙인이나 과잉 일반화로 읽힐 수 있습니다.`,
+      "사람이나 집단을 단정하지 말고 행동이나 구조 중심의 중립적 이름으로 바꾸세요.",
       { current_name: label, flagged_term: flaggedTerm, suggested_name: "행동 구조 중심의 중립적 명명으로 수정", confidence: 0.82 },
     )];
   });
@@ -233,9 +234,23 @@ function edgeLabel(pack: Pack, edgeId: string): string {
   return edge ? `${edge.source_node_id} -> ${edge.target_node_id}` : edgeId;
 }
 
+function severityLabel(severity: string): string {
+  const labels: Record<string, string> = {
+    critical: "매우 중요",
+    error: "중요",
+    warning: "주의",
+    info: "참고",
+  };
+  return labels[severity] ?? severity;
+}
+
+function issueTarget(issue: Issue): string {
+  return `${targetTypeLabel(issue.target_type)}:${issue.target_id}`;
+}
+
 function issueRows(issues: Issue[]): string {
   return issues.length
-    ? issues.map((issue) => `| ${issue.severity} | ${issue.target_type}:${issue.target_id} | ${issue.message} | ${issue.suggestion} |`).join("\n")
+    ? issues.map((issue) => `| ${severityLabel(issue.severity)} | ${issueTarget(issue)} | ${issueMessage(issue)} | ${issueSuggestion(issue)} |`).join("\n")
     : "| - | - | - | - |";
 }
 
@@ -245,66 +260,66 @@ function generateMarkdownReport(pack: Pack, score: ReturnType<typeof calculateSc
   const bias = issues.filter((issue) => issue.category === "bias");
   const critical = issues.filter((issue) => ["error", "critical"].includes(issue.severity));
   const strongRows = strong.map((issue) => `| ${edgeLabel(pack, issue.target_id)} | ${issue.current_relation ?? "-"} | ${issue.suggested_relation ?? "-"} |`).join("\n") || "| - | - | - |";
-  const biasRows = bias.map((issue) => `| ${issue.target_type}:${issue.target_id} | ${issue.current_name ?? "-"} | ${issue.message} | ${issue.suggested_name ?? "-"} |`).join("\n") || "| - | - | - |";
-  const unsupportedRows = unsupported.map((issue) => `| ${edgeLabel(pack, issue.target_id)} | ${issue.current_relation ?? "-"} | ${issue.message} | ${issue.suggestion} |`).join("\n") || "| - | - | - |";
+  const biasRows = bias.map((issue) => `| ${issueTarget(issue)} | ${issue.current_name ?? "-"} | ${issueMessage(issue)} | ${issue.suggested_name ?? "-"} |`).join("\n") || "| - | - | - |";
+  const unsupportedRows = unsupported.map((issue) => `| ${edgeLabel(pack, issue.target_id)} | ${issue.current_relation ?? "-"} | ${issueMessage(issue)} | ${issueSuggestion(issue)} |`).join("\n") || "| - | - | - |";
 
-  return `# Megalopa Audit Report
+  return `# Megalopa 분석 리포트
 
-## Pack Summary
+## 팩 요약
 
-- Pack: ${pack.title ?? pack.id}
-- Version: ${pack.version ?? "-"}
-- Domain: ${pack.domain ?? "-"}
-- Nodes: ${(pack.nodes ?? []).length}
-- Edges: ${(pack.edges ?? []).length}
-- Evidence Items: ${(pack.evidence ?? []).length}
+- 팩: ${pack.title ?? pack.id}
+- 버전: ${pack.version ?? "-"}
+- 분야: ${pack.domain ?? "-"}
+- 노드: ${(pack.nodes ?? []).length}
+- 관계: ${(pack.edges ?? []).length}
+- 근거 항목: ${(pack.evidence ?? []).length}
 
-## Reliability Score
+## 신뢰도 점수
 
-- Score: ${score.reliability_score}
-- Grade: ${score.grade}
-- Risk Level: ${score.risk_level}
+- 점수: ${score.reliability_score}
+- 사용 등급: ${gradeLabel(score.grade)}
+- 사용 위험도: ${riskLabel(score.risk_level)}
 
-## Key Findings
+## 핵심 결과
 
-1. 총 ${(pack.nodes ?? []).length}개 노드와 ${(pack.edges ?? []).length}개 엣지를 분석했습니다.
-2. Reliability Score는 ${score.reliability_score}점이며 등급은 ${score.grade}입니다.
+1. 총 ${(pack.nodes ?? []).length}개 노드와 ${(pack.edges ?? []).length}개 관계를 분석했습니다.
+2. 신뢰도 점수는 ${score.reliability_score}점이며 사용 등급은 ${gradeLabel(score.grade)}입니다.
 3. 감지된 이슈는 ${issues.length}건입니다. 점수는 진리 판정이 아니라 사용 위험도 안내입니다.
 
-## Critical Issues
+## 먼저 고칠 문제
 
-| Severity | Target | Issue | Suggestion |
+| 중요도 | 대상 | 문제 | 제안 |
 |---|---|---|---|
 ${issueRows(critical)}
 
-## Unsupported Edges
+## 확인 필요한 관계
 
-| Edge | Relation | Problem | Suggestion |
+| 관계 | 현재 표현 | 문제 | 제안 |
 |---|---|---|---|
 ${unsupportedRows}
 
-## Strong Relation Warnings
+## 너무 단정적인 관계
 
-| Edge | Current Relation | Suggested Relation |
+| 관계 | 현재 표현 | 추천 표현 |
 |---|---|---|
 ${strongRows}
 
-## Bias / Naming Warnings
+## 편향 표현
 
-| Target | Current Name | Issue | Suggested Name |
+| 대상 | 현재 이름 | 문제 | 추천 이름 |
 |---|---|---|---|
 ${biasRows}
 
-## Recommended Use
+## 추천 사용 범위
 
 - 탐색용: ${["low", "medium"].includes(score.risk_level) ? "가능" : "주의 필요"}
 - 콘텐츠 생성용: 출처 표시와 수동 검토 후 사용
 - 에이전트 자동판단용: ${["medium", "high", "critical"].includes(score.risk_level) ? "비권장" : "제한적 가능"}
 - 공개 배포용: ${["trusted", "usable_with_citation"].includes(score.grade) ? "가능" : "수정 후 재검토 권장"}
 
-## Repair Checklist
+## 수정 체크리스트
 
-- [ ] 근거 없는 엣지 보완
+- [ ] 근거 없는 관계 보완
 - [ ] 강한 인과 관계 완화
 - [ ] 편향적 명명 수정
 - [ ] 출처 메타데이터 추가

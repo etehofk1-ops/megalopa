@@ -1,60 +1,60 @@
-# Megalopa Audit Report
+# Megalopa 분석 리포트
 
-## Pack Summary
+## 팩 요약
 
-- Pack: Dog Behavior Ontology QA Sample
-- Version: 0.1.0
-- Domain: animal_behavior
-- Nodes: 3
-- Edges: 2
-- Evidence Items: 1
+- 팩: Dog Behavior Ontology QA Sample
+- 버전: 0.1.0
+- 분야: animal_behavior
+- 노드: 3
+- 관계: 2
+- 근거 항목: 1
 
-## Reliability Score
+## 신뢰도 점수
 
-- Score: 59
-- Grade: private_only
-- Risk Level: high
+- 점수: 59
+- 사용 등급: 내부 검토용
+- 사용 위험도: 높음
 
-## Key Findings
+## 핵심 결과
 
-1. 총 3개 노드와 2개 엣지를 분석했습니다.
-2. Reliability Score는 59점이며 등급은 private_only입니다.
+1. 총 3개 노드와 2개 관계를 분석했습니다.
+2. 신뢰도 점수는 59점이며 사용 등급은 내부 검토용입니다.
 3. 감지된 이슈는 4건입니다. 점수는 진리 판정이 아니라 사용 위험도 안내입니다.
 
-## Critical Issues
+## 먼저 고칠 문제
 
-| Severity | Target | Issue | Suggestion |
+| 중요도 | 대상 | 문제 | 제안 |
 |---|---|---|---|
-| error | edge:edge2 | Edge has no evidence references. | Edges should include evidence before they are used for agent reasoning. |
+| 중요 | 관계:edge2 | 이 관계에 연결된 근거가 없습니다. | 관계는 추론에 직접 쓰이므로 근거를 연결한 뒤 사용하세요. |
 
-## Unsupported Edges
+## 확인 필요한 관계
 
-| Edge | Relation | Problem | Suggestion |
+| 관계 | 현재 표현 | 문제 | 제안 |
 |---|---|---|---|
-| anxiety -> barking | - | Edge has no evidence references. | Edges should include evidence before they are used for agent reasoning. |
+| anxiety -> barking | - | 이 관계에 연결된 근거가 없습니다. | 관계는 추론에 직접 쓰이므로 근거를 연결한 뒤 사용하세요. |
 
-## Strong Relation Warnings
+## 너무 단정적인 관계
 
-| Edge | Current Relation | Suggested Relation |
+| 관계 | 현재 표현 | 추천 표현 |
 |---|---|---|
 | anxiety -> barking | causes | can_contribute_to |
 
-## Bias / Naming Warnings
+## 편향 표현
 
-| Target | Current Name | Issue | Suggested Name |
+| 대상 | 현재 이름 | 문제 | 추천 이름 |
 |---|---|---|---|
 | - | - | - |
 
-## Recommended Use
+## 추천 사용 범위
 
 - 탐색용: 주의 필요
 - 콘텐츠 생성용: 출처 표시와 수동 검토 후 사용
 - 에이전트 자동판단용: 비권장
 - 공개 배포용: 수정 후 재검토 권장
 
-## Repair Checklist
+## 수정 체크리스트
 
-- [ ] 근거 없는 엣지 보완
+- [ ] 근거 없는 관계 보완
 - [ ] 강한 인과 관계 완화
 - [ ] 편향적 명명 수정
 - [ ] 출처 메타데이터 추가

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppFrame } from "@/components/AppFrame";
 import { Button, Pill } from "@/components/ui";
@@ -43,11 +44,11 @@ export default function UploadPage() {
     setError("");
     setFileName(file.name);
     if (file.size > 1024 * 1024) {
-      setError("현재 MVP는 1MB 이하의 JSON 파일만 받습니다.");
+      setError("현재 버전은 1MB 이하의 JSON 파일만 받습니다.");
       return;
     }
     if (!file.name.match(/\.json$/i)) {
-      setError("현재 MVP API는 JSON 파일만 파싱합니다. YAML은 다음 단계에서 추가할 예정입니다.");
+      setError("현재 버전은 JSON 파일만 분석합니다. YAML은 다음 단계에서 추가할 예정입니다.");
       return;
     }
     const content = await file.text();
@@ -78,18 +79,19 @@ export default function UploadPage() {
   }
 
   const modes: Array<[InputMode, string, string]> = [
-    ["sample", "Sample Pack", `${samplePath}로 즉시 분석`],
-    ["paste", "Paste JSON", "OpenCrab Pack JSON 붙여넣기"],
-    ["file", "Upload File", "로컬 JSON 파일 읽기"],
+    ["sample", "샘플 팩", `${samplePath}로 바로 분석`],
+    ["paste", "JSON 붙여넣기", "OpenCrab 팩 JSON 붙여넣기"],
+    ["file", "파일 업로드", "내 컴퓨터의 JSON 파일 읽기"],
   ];
 
   return (
     <AppFrame>
       <section className="shell py-10">
         <div className="mb-6">
-          <div className="text-subtle">Upload</div>
-          <h1 className="mt-2 font-semibold">OpenCrab Pack을 넣고 신뢰도 리포트를 생성하세요</h1>
-          <p className="mt-2 max-w-2xl text-muted">초기 MVP는 파일을 영구 저장하지 않고 요청 단위로 분석합니다. 결과는 현재 탭의 sessionStorage에만 임시 보관됩니다.</p>
+          <div className="text-subtle">분석하기</div>
+          <h1 className="mt-2 font-semibold">OpenCrab 팩을 넣고 신뢰도 리포트를 생성하세요</h1>
+          <p className="mt-2 max-w-2xl text-muted">파일은 영구 저장하지 않고 현재 요청에서만 분석합니다. 처음이라면 가이드에서 결과를 읽는 순서를 먼저 확인할 수 있습니다.</p>
+          <Link href="/docs/quick-start" className="mt-3 inline-flex rounded-md border border-[#80e0bb]/30 bg-[#80e0bb]/10 px-3 py-2 font-medium text-[#c7f4df]">5분 시작 가이드</Link>
         </div>
 
         <div className="mb-4 grid gap-3 md:grid-cols-3">
@@ -110,7 +112,7 @@ export default function UploadPage() {
           <div className="card p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="font-medium">Pack Input</div>
+                <div className="font-medium">팩 입력</div>
                 <div className="text-muted">JSON을 붙여넣거나 파일을 불러오면 그대로 분석 API에 전달합니다.</div>
               </div>
               <div className="flex gap-2">
@@ -130,23 +132,26 @@ export default function UploadPage() {
                 setMode("paste");
               }}
             />
-            {fileName ? <div className="mt-2 text-muted">Loaded file: {fileName}</div> : null}
+            {fileName ? <div className="mt-2 text-muted">불러온 파일: {fileName}</div> : null}
             {error ? <div className="mt-3 rounded-lg border border-[#ef4444]/30 bg-[#ef4444]/5 p-3 text-[#fecaca]">{error}</div> : null}
           </div>
 
           <aside className="card p-4">
             <div className="flex items-center justify-between gap-2">
               <div className="font-medium">분석 설정</div>
-              <Pill tone="accent">MVP 0.1</Pill>
+              <Pill tone="accent">현재 버전</Pill>
             </div>
             <div className="mt-4 space-y-3 text-muted">
-              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>Storage</span><span>temporary session</span></div>
-              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>Analyzer</span><span>TypeScript API</span></div>
-              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>LLM</span><span>disabled</span></div>
-              <div className="flex justify-between"><span>Status</span><span>{status}</span></div>
+              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>저장 방식</span><span>현재 탭에 임시 저장</span></div>
+              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>분석 방식</span><span>규칙 기반 분석</span></div>
+              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>LLM 분석</span><span>꺼짐</span></div>
+              <div className="flex justify-between"><span>상태</span><span>{status}</span></div>
             </div>
             <div className="mt-5 rounded-lg border border-white/[0.06] bg-white/[0.025] p-3 text-muted">
-              생성 결과: Reliability Score, Risk Level, Unsupported Edges, Strong Relation Warnings, Bias Naming Warnings, Markdown Report.
+              분석 결과로 신뢰도 점수, 사용 위험도, 확인 필요한 관계, 단정적인 관계, 편향 표현, Markdown 리포트를 보여줍니다.
+            </div>
+            <div className="mt-3 rounded-lg border border-[#80e0bb]/20 bg-[#80e0bb]/5 p-3 text-muted">
+              어떤 JSON을 넣어야 할지 모르겠다면 <Link href="/docs/basic-terms" className="text-[#80e0bb]">기본 용어</Link>와 <Link href="/docs/how-it-works" className="text-[#80e0bb]">작동 방식</Link>을 먼저 보세요.
             </div>
             <Button className="mt-6 w-full border-[#7170ff]/40 bg-[#5e6ad2]" onClick={analyzePack} disabled={status === "분석 중"}>분석 시작</Button>
           </aside>
