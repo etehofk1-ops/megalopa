@@ -1,75 +1,141 @@
+import Image from "next/image";
 import Link from "next/link";
+
 import { AppFrame } from "@/components/AppFrame";
-import { NodeIcon, ShieldIcon } from "@/components/icons";
-import { MetricCard, Pill } from "@/components/ui";
+import { GrowthPin } from "@/components/GrowthPin";
+import { ServiceFlowPreview } from "@/components/ServiceFlowPreview";
+
+import anatomyDark from "./asset/megalopa-anatomy-dark.png";
+import heroMegalopa from "./asset/megalopa-dark.png";
+import wordmarkDark from "./asset/megalopa-wordmark-dark.png";
+
+const auditItems = [
+  ["근거 없는 관계", "관계가 실제 근거와 연결되어 있는지 확인합니다."],
+  ["너무 강한 주장", "causes처럼 단정적인 표현을 더 안전한 관계로 낮춥니다."],
+  ["약한 출처", "공식 문서, 논문, 책, 추적 가능한 글인지 드러냅니다."],
+  ["편향된 이름", "사람이나 집단을 단정하는 노드 이름을 먼저 고칩니다."],
+];
 
 export default function HomePage() {
   return (
     <AppFrame>
-      <section className="shell grid gap-8 py-12 lg:grid-cols-[1fr_460px]">
-        <div className="flex flex-col justify-center">
-          <div className="mb-5 flex flex-wrap gap-2">
-            <Pill tone="accent">OpenCrab 팩 검수</Pill>
-            <Pill>신뢰도 리포트</Pill>
-            <Pill>AI 자동판단 안전성</Pill>
+      <div className="landing-page">
+        <section className="landing-hero" aria-labelledby="landing-title">
+          <div className="landing-hero-art" aria-hidden="true" style={{ position: "absolute" }}>
+            <Image
+              src={heroMegalopa}
+              alt=""
+              fill
+              priority
+              className="landing-hero-image"
+              sizes="100vw"
+            />
           </div>
-          <h1 className="max-w-2xl font-semibold text-[#f7f8f8]">
-            OpenCrab 팩을 신뢰하기 전에, 관계의 근거와 표현 강도를 먼저 검수하세요.
-          </h1>
-          <p className="mt-5 max-w-2xl text-muted">
-            Megalopa는 진리 판정기가 아니라 사용 위험도 평가기입니다. JSON 팩에서 근거 없는 관계, 너무 단정적인 관계, 편향 표현, 약한 출처를 찾고 사람이 검토 가능한 Markdown 리포트를 생성합니다.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link href="/docs/quick-start" className="rounded-md border border-[#80e0bb]/40 bg-[#80e0bb]/10 px-4 py-2 font-medium text-[#c7f4df]">처음 쓰는 법 보기</Link>
-            <Link href="/upload" className="rounded-md border border-[#7170ff]/40 bg-[#5e6ad2] px-4 py-2 font-medium text-white">팩 분석 시작</Link>
-            <Link href="/reports/sample" className="rounded-md border border-white/10 bg-white/[0.04] px-4 py-2 font-medium text-[#f7f8f8]">샘플 리포트 보기</Link>
-          </div>
-          <div className="mt-8 grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-              <div className="text-subtle">분석 전</div>
-              <div className="mt-2 font-medium text-[#fecaca]">anxiety causes barking</div>
-            </div>
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-              <div className="text-subtle">Megalopa 경고</div>
-              <div className="mt-2 font-medium text-[#f8c46c]">너무 단정적인 관계</div>
-            </div>
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-              <div className="text-subtle">수정 후</div>
-              <div className="mt-2 font-medium text-[#80e0bb]">anxiety can_contribute_to barking</div>
+          <div className="landing-hero-shade" aria-hidden="true" />
+          <div className="shell landing-hero-inner">
+            <p className="landing-kicker">Ontology QA Layer</p>
+            <h1 id="landing-title" className="landing-title">Megalopa</h1>
+            <p className="landing-statement">
+              LocalCrab에서 만들고,<br />
+              Megalopa에서 검수하고,<br />
+              OpenCrab에 배포한다.
+            </p>
+            <p className="landing-philosophy">
+              그래프는 태어날 때부터 신뢰할 수 있는 것이 아닙니다.<br />
+              근거, 검수, 수정의 과정을 거쳐 탈피해야 합니다.
+            </p>
+            <div className="landing-actions">
+              <Link href="/upload" className="landing-primary-action">팩 분석 시작</Link>
+              <Link href="/docs/quick-start" className="landing-secondary-action">가이드 보기</Link>
             </div>
           </div>
-        </div>
-        <div className="card panel-grid p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-muted">샘플 분석 미리보기</span>
-            <ShieldIcon className="h-4 w-4 text-[#a6a5ff]" />
+          <div className="landing-flow-hint">
+            <span>Egg</span>
+            <span>Zoea</span>
+            <span>Megalopa</span>
+            <span>Crab</span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <MetricCard label="신뢰도 점수" value="68" detail="탐색용" />
-            <MetricCard label="사용 위험도" value="보통" detail="수동 검토 필요" />
-            <MetricCard label="확인 필요" value="1" detail="관계 문제" />
-            <MetricCard label="단정적 관계" value="1" detail="표현 완화 필요" />
+        </section>
+
+        <GrowthPin />
+
+        <ServiceFlowPreview />
+
+        <section className="landing-philosophy-section" aria-labelledby="philosophy-title" style={{ position: "relative" }}>
+          <Image
+            src={anatomyDark}
+            alt=""
+            fill
+            className="philosophy-bg"
+            sizes="100vw"
+          />
+          <div className="philosophy-cover" aria-hidden="true" />
+          <div className="shell philosophy-inner">
+            <p className="section-kicker section-kicker-light">Audit Philosophy</p>
+            <h2 id="philosophy-title" className="section-title">
+              Megalopa는 만드는 단계가 아니라,<br />
+              믿어도 되는지 따지는 단계입니다.
+            </h2>
+            <p className="section-lead">
+              OpenCrab 팩은 에이전트가 추론할 수 있는 관계 그래프입니다. 그래서 잘못된 관계 하나가 단순 오타보다 더 멀리 퍼질 수 있습니다.
+            </p>
+            <div className="philosophy-lines" aria-label="Megalopa가 검수하는 항목">
+              <span>근거 없는 관계를 찾고</span>
+              <span>너무 강한 주장을 낮추고</span>
+              <span>약한 출처를 드러내고</span>
+              <span>편향된 이름을 고칩니다</span>
+            </div>
           </div>
-          <div className="mt-4 rounded-lg border border-white/[0.06] bg-white/[0.03] p-4">
-            <NodeIcon className="mb-3 h-5 w-5 text-[#80e0bb]" />
-            <div className="font-medium">노드보다 관계를 더 엄격하게 검수합니다.</div>
-            <p className="mt-2 text-muted">출처 없는 관계와 강한 인과 관계는 에이전트 자동 판단에 위험한 입력이 될 수 있으므로 우선 수정 대상으로 표시합니다.</p>
-          </div>
-          <div className="mt-4 space-y-3">
-            {[
-              ["01", "읽기", "노드, 관계, 근거 추출"],
-              ["02", "검사", "중복 노드와 누락 참조 확인"],
-              ["03", "검토", "관계 강도와 편향 표현 탐지"],
-              ["04", "내보내기", "Markdown 리포트와 수정 체크리스트 생성"],
-            ].map(([step, title, body]) => (
-              <div key={step} className="flex gap-3 rounded-lg border border-white/[0.06] bg-black/20 p-3">
-                <span className="text-accent">{step}</span>
-                <div><div className="font-medium">{title}</div><div className="text-muted">{body}</div></div>
+        </section>
+
+        <section className="audit-section" aria-labelledby="audit-title">
+          <div className="shell audit-layout">
+            <div>
+              <p className="section-kicker">What Megalopa Removes</p>
+              <h2 id="audit-title" className="section-title section-title-dark">
+                신뢰 가능한 팩이 되기 전,<br />
+                껍질처럼 벗겨내야 하는 것들.
+              </h2>
+              <p className="section-lead section-lead-dark">
+                Megalopa의 결과는 점수표로 끝나지 않습니다. 무엇을 먼저 고쳐야 하는지, 왜 위험한지, 어떤 표현으로 낮추면 좋은지까지 이어집니다.
+              </p>
+              <div className="audit-grid">
+                {auditItems.map(([title, body]) => (
+                  <article key={title} className="audit-item">
+                    <h3>{title}</h3>
+                    <p>{body}</p>
+                  </article>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <section className="landing-final" aria-labelledby="final-title" style={{ position: "relative" }}>
+          <Image
+            src={wordmarkDark}
+            alt=""
+            fill
+            className="final-bg"
+            sizes="100vw"
+          />
+          <div className="final-cover" aria-hidden="true" />
+          <div className="shell final-inner">
+            <p className="section-kicker section-kicker-light">Pre-release Audit</p>
+            <h2 id="final-title" className="section-title">
+              OpenCrab에 올리기 전,<br />
+              팩이 신뢰를 견딜 수 있는지 확인하세요.
+            </h2>
+            <p className="section-lead final-lead">
+              LocalCrab이 만든 후보 팩을 넣으면 Megalopa가 근거, 관계, 출처, 편향을 검수하고 수정 우선순위를 제안합니다.
+            </p>
+            <div className="landing-actions">
+              <Link href="/upload" className="landing-primary-action">팩 분석 시작</Link>
+              <Link href="/reports/sample" className="landing-secondary-action">샘플 리포트 보기</Link>
+            </div>
+          </div>
+        </section>
+      </div>
     </AppFrame>
   );
 }
