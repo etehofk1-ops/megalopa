@@ -4,7 +4,15 @@
 
 Megalopa는 LocalCrab에서 만든 온톨로지 후보 팩을 OpenCrab에 배포하기 전, 근거와 관계를 검수하고 사용 위험도를 알려주는 사전 감사 레이어입니다.
 
-[Live demo](https://megalopa.vercel.app) · [5분 시작 가이드](https://megalopa.vercel.app/docs/quick-start) · [왜 만들었나요](https://megalopa.vercel.app/docs/why-megalopa)
+[Live demo](https://megalopa.vercel.app) · [5분 시작 가이드](https://megalopa.vercel.app/docs/quick-start) · [왜 만들었나요](https://megalopa.vercel.app/docs/why-megalopa) · [OpenCrab](https://opencrab.sh)
+
+## OpenCrab Ecosystem
+
+Megalopa는 알렉스님의 OpenCrab 생태계와 연결되는 사전 검수 도구입니다.
+
+- Creator / OpenCrab maintainer: @AlexAI-MCP
+- OpenCrab SaaS: [opencrab.sh](https://opencrab.sh)
+- OpenCrab repository: [AlexAI-MCP/OpenCrab](https://github.com/AlexAI-MCP/OpenCrab)
 
 ## Philosophy
 
