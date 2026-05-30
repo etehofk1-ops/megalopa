@@ -12,6 +12,8 @@ import megalopaBackdrop from "@/app/asset/megalopa-light-N.png";
 import zoeaLight from "@/app/asset/zoea-light.png";
 import zoeaBackdrop from "@/app/asset/zoea-light-N.png";
 
+const PINNED_SCROLL_QUERY = "(min-width: 981px)";
+
 type GrowthStage = {
   id: string;
   label: string;
@@ -63,11 +65,32 @@ const stages: GrowthStage[] = [
 
 export function GrowthPin() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isPinnedScroll, setIsPinnedScroll] = useState(false);
   const sectionRef = useRef<HTMLElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const activeStage = stages[activeIndex] ?? stages[0];
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia(PINNED_SCROLL_QUERY);
+
+    const syncMode = () => {
+      setIsPinnedScroll(mediaQuery.matches);
+
+      if (!mediaQuery.matches) {
+        setActiveIndex(0);
+        sectionRef.current?.style.removeProperty("--growth-bg-shift");
+      }
+    };
+
+    syncMode();
+    mediaQuery.addEventListener("change", syncMode);
+
+    return () => mediaQuery.removeEventListener("change", syncMode);
+  }, []);
+
+  useEffect(() => {
+    if (!isPinnedScroll) return;
+
     let frame = 0;
 
     const updateStage = () => {
@@ -83,7 +106,7 @@ export function GrowthPin() {
       const nextIndex = Math.min(stages.length - 1, Math.max(0, Math.floor(progress * stages.length)));
 
       sectionRef.current?.style.setProperty("--growth-bg-shift", `${Math.round((0.5 - clampedProgress) * 360)}px`);
-      setActiveIndex(nextIndex);
+      setActiveIndex((currentIndex) => (currentIndex === nextIndex ? currentIndex : nextIndex));
     };
 
     const requestUpdate = () => {
@@ -100,21 +123,27 @@ export function GrowthPin() {
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", requestUpdate);
     };
-  }, []);
+  }, [isPinnedScroll]);
 
   return (
     <section ref={sectionRef} className="growth-section" aria-labelledby="growth-title">
       <div className="growth-section-backdrop" aria-hidden="true">
-        <div className={`growth-section-backdrop-inner growth-section-backdrop-${activeStage.id}`}>
-          <Image
-            key={`growth-bg-${activeStage.id}`}
-            src={activeStage.backdrop}
-            alt=""
-            fill
-            className="growth-section-backdrop-image"
-            loading="eager"
-            sizes="100vw"
-          />
+        <div className="growth-section-backdrop-pin">
+          {stages.map((stage, index) => (
+            <div
+              key={`growth-bg-${stage.id}`}
+              className={`growth-section-backdrop-layer growth-section-backdrop-${stage.id} ${index === activeIndex ? "is-active" : ""}`}
+            >
+              <Image
+                src={stage.backdrop}
+                alt=""
+                fill
+                className="growth-section-backdrop-image"
+                loading={index === 0 ? "eager" : "lazy"}
+                sizes="100vw"
+              />
+            </div>
+          ))}
         </div>
       </div>
       <div className="shell">
@@ -130,14 +159,17 @@ export function GrowthPin() {
           <div className="growth-stage-sticky" aria-live="polite">
             <aside className="growth-pin">
               <div className="growth-visual">
-                <Image
-                  key={activeStage.id}
-                  src={activeStage.image}
-                  alt={`${activeStage.label} 단계 이미지`}
-                  className={`growth-stage-image growth-stage-image-${activeStage.id}`}
-                  sizes="(max-width: 900px) 82vw, 421px"
-                  priority={activeIndex === 0}
-                />
+                {stages.map((stage, index) => (
+                  <Image
+                    key={stage.id}
+                    src={stage.image}
+                    alt={index === activeIndex ? `${stage.label} 단계 이미지` : ""}
+                    className={`growth-stage-image growth-stage-image-${stage.id} ${index === activeIndex ? "is-active" : ""}`}
+                    sizes="421px"
+                    priority={index === 0}
+                    aria-hidden={index !== activeIndex}
+                  />
+                ))}
               </div>
               <div className="growth-pin-copy">
                 <span>{activeStage.label}</span>
@@ -175,6 +207,27 @@ export function GrowthPin() {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="growth-mobile-list" aria-label="모바일 성장 단계">
+          {stages.map((stage) => (
+            <article key={`mobile-${stage.id}`} className="growth-mobile-stage-card">
+              <div className="growth-mobile-image-wrap">
+                <Image
+                  src={stage.image}
+                  alt={`${stage.label} 단계 이미지`}
+                  className={`growth-mobile-stage-image growth-mobile-stage-image-${stage.id}`}
+                  sizes="(max-width: 620px) 78vw, 360px"
+                />
+              </div>
+              <div className="growth-mobile-copy">
+                <div className="growth-step-label">{stage.label}</div>
+                <h3>{stage.title}</h3>
+                <p>{stage.body}</p>
+                <span>{stage.system}</span>
+              </div>
+            </article>
+          ))}
         </div>
       </div>
     </section>

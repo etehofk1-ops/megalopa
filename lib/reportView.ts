@@ -29,6 +29,59 @@ export function recommendedUse(result: AnalyzeResult) {
   ];
 }
 
+export function reportVerdict(result: AnalyzeResult) {
+  const risk = result.score.risk_level;
+  const groups = groupIssues(result.issues);
+
+  if (risk === "critical") {
+    return {
+      label: "사용 보류",
+      title: "이 팩은 지금 바로 배포하면 위험합니다.",
+      body: "구조 오류나 근거 문제가 커서 에이전트가 잘못된 관계를 사실처럼 사용할 수 있습니다. 먼저 필수 문제를 고친 뒤 다시 분석하세요.",
+      action: "먼저 고칠 문제부터 확인",
+      tone: "danger" as const,
+    };
+  }
+
+  if (risk === "high") {
+    return {
+      label: "수정 필요",
+      title: "이 팩은 배포 전 수정이 필요합니다.",
+      body: "근거가 없는 관계나 구조 문제가 남아 있습니다. 공개 배포보다 수정 큐를 먼저 처리하는 흐름이 안전합니다.",
+      action: "수정 우선순위 보기",
+      tone: "danger" as const,
+    };
+  }
+
+  if (risk === "medium" || groups.strong.length || groups.unsupported.length) {
+    return {
+      label: "주의 필요",
+      title: "이 팩은 검토 후 사용할 수 있습니다.",
+      body: "탐색용으로는 사용할 수 있지만, 관계 표현과 근거 연결을 확인한 뒤 OpenCrab에 올리는 편이 좋습니다.",
+      action: "확인 필요한 관계 보기",
+      tone: "warn" as const,
+    };
+  }
+
+  return {
+    label: "배포 준비",
+    title: "이 팩은 배포 준비에 가깝습니다.",
+    body: "큰 위험 신호는 적습니다. 출처 표시와 마지막 수동 검토를 거치면 재사용 가능한 팩으로 정리할 수 있습니다.",
+    action: "마지막 확인 보기",
+    tone: "ok" as const,
+  };
+}
+
+export function firstRepairLabel(result: AnalyzeResult) {
+  const groups = groupIssues(result.issues);
+  if (groups.critical.length) return "먼저 고칠 문제";
+  if (groups.unsupported.length) return "확인 필요한 관계";
+  if (groups.strong.length) return "단정적 관계";
+  if (groups.bias.length) return "편향 표현";
+  if (result.issues.length) return "전체 문제";
+  return "마지막 확인";
+}
+
 export function riskLabel(risk: string) {
   const labels: Record<string, string> = {
     low: "낮음",
@@ -126,6 +179,62 @@ export function issueSuggestion(issue: Issue) {
     BIAS_STIGMATIZING_LABEL: "사람이나 집단을 단정하지 말고 행동이나 구조 중심의 중립적 이름으로 바꾸세요.",
   };
   return suggestions[issue.code] ?? issue.suggestion;
+}
+
+export function issueImpact(issue: Issue) {
+  if (issue.category === "evidence") return "근거 없이 추론될 수 있음";
+  if (issue.category === "relation") return "관계가 과하게 단정될 수 있음";
+  if (issue.category === "provenance") return "출처 신뢰도가 낮아짐";
+  if (issue.category === "schema") return "팩 구조가 깨질 수 있음";
+  if (issue.category === "bias") return "표현이 편향적으로 읽힐 수 있음";
+  return "사용 전 검토 필요";
+}
+
+export function issueWhy(issue: Issue) {
+  if (issue.category === "evidence") return "근거가 연결되지 않으면 에이전트가 관계를 사실처럼 확대 해석할 수 있습니다.";
+  if (issue.category === "relation") return "관계 표현이 너무 강하면 가능성이나 상관관계가 확정된 인과처럼 보일 수 있습니다.";
+  if (issue.category === "provenance") return "출처를 추적하기 어려우면 나중에 사용자가 왜 이 결론이 나왔는지 확인하기 어렵습니다.";
+  if (issue.category === "schema") return "팩 구조가 어긋나면 분석이나 배포 과정에서 노드와 관계가 제대로 연결되지 않습니다.";
+  if (issue.category === "bias") return "편향된 이름은 사람이나 집단을 단정해 잘못된 판단으로 이어질 수 있습니다.";
+  return "OpenCrab에 올리기 전에 사람이 한 번 더 확인해야 하는 항목입니다.";
+}
+
+export function nextAction(issue: Issue) {
+  if (issue.code.includes("MISSING_EDGE")) return "관계에 근거 연결";
+  if (issue.code.includes("MISSING_NODE")) return "노드에 근거 연결";
+  if (issue.code === "RELATION_STRONG_CAUSAL") return "관계 표현 완화";
+  if (issue.code === "PROVENANCE_WEAK_SOURCE") return "출처 보강";
+  if (issue.category === "bias") return "중립 표현으로 수정";
+  if (issue.category === "schema") return "누락 필드 수정";
+  return "수동 검토";
+}
+
+export function repairExample(issue: Issue) {
+  if (issue.code === "RELATION_STRONG_CAUSAL") {
+    return {
+      before: `"relation_type": "${issue.current_relation ?? "causes"}"`,
+      after: `"relation_type": "${issue.suggested_relation ?? "can_contribute_to"}"`,
+    };
+  }
+  if (issue.code === "EVIDENCE_MISSING_EDGE" || issue.code === "EVIDENCE_MISSING_NODE") {
+    return {
+      before: `"evidence_ids": []`,
+      after: `"evidence_ids": ["ev1"]`,
+    };
+  }
+  if (issue.code === "PROVENANCE_WEAK_SOURCE") {
+    return {
+      before: `"source_type": "unknown"`,
+      after: `"source_type": "paper", "source_url": "https://..."`,
+    };
+  }
+  if (issue.category === "bias") {
+    return {
+      before: `"label": "${issue.current_name ?? "문제 표현"}"`,
+      after: `"label": "${issue.suggested_name ?? "중립적 이름"}"`,
+    };
+  }
+  return null;
 }
 
 export function componentMax(key: string) {

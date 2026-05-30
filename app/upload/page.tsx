@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, DragEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppFrame } from "@/components/AppFrame";
@@ -38,9 +38,7 @@ export default function UploadPage() {
     router.push(`/reports/${reportId}`);
   }
 
-  async function handleFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function readInputFile(file: File) {
     setError("");
     setFileName(file.name);
     if (file.size > 1024 * 1024) {
@@ -55,6 +53,19 @@ export default function UploadPage() {
     setText(content);
     setMode("file");
     setStatus(`${file.name} 로드 완료`);
+  }
+
+  async function handleFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await readInputFile(file);
+  }
+
+  async function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (!file) return;
+    await readInputFile(file);
   }
 
   async function analyzePack() {
@@ -83,15 +94,41 @@ export default function UploadPage() {
     ["paste", "JSON 붙여넣기", "OpenCrab 팩 JSON 붙여넣기"],
     ["file", "파일 업로드", "내 컴퓨터의 JSON 파일 읽기"],
   ];
+  const flowSteps = [
+    { title: "팩 준비", body: "LocalCrab에서 만든 JSON 팩이나 샘플 팩을 준비합니다." },
+    { title: "Megalopa 검수", body: "근거, 관계 표현, 구조 오류, 출처 품질을 확인합니다." },
+    { title: "수정 큐 확인", body: "무엇부터 고치면 되는지 리포트에서 바로 확인합니다." },
+  ];
+  const analysisSteps = ["팩 구조 읽기", "노드와 관계 확인", "근거 없는 관계 찾기", "수정 우선순위 정리"];
+  const isAnalyzing = status === "분석 중";
 
   return (
     <AppFrame>
       <section className="shell py-10">
-        <div className="mb-6">
-          <div className="text-subtle">분석하기</div>
-          <h1 className="mt-2 font-semibold">OpenCrab 팩을 넣고 신뢰도 리포트를 생성하세요</h1>
-          <p className="mt-2 max-w-2xl text-muted">파일은 영구 저장하지 않고 현재 요청에서만 분석합니다. 처음이라면 가이드에서 결과를 읽는 순서를 먼저 확인할 수 있습니다.</p>
-          <Link href="/docs/quick-start" className="mt-3 inline-flex rounded-md border border-[#80e0bb]/30 bg-[#80e0bb]/10 px-3 py-2 font-medium text-[#c7f4df]">5분 시작 가이드</Link>
+        <div className="feature-hero mb-5">
+          <div>
+            <div className="text-subtle">분석하기</div>
+            <h1>OpenCrab에 올리기 전, 팩을 먼저 점검하세요.</h1>
+            <p>Megalopa는 팩을 만드는 도구가 아니라, 이미 만들어진 후보 팩이 믿을 만한지 확인하는 검수 도우미입니다.</p>
+          </div>
+          <div className="feature-hero-panel">
+            <span>처음이라면</span>
+            <strong>샘플 팩으로 바로 리포트를 확인해보세요.</strong>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button onClick={loadSampleText}>샘플 바로 분석</Button>
+              <Link href="/docs/quick-start" className="inline-flex items-center justify-center rounded-md border border-[#80e0bb]/30 bg-[#80e0bb]/10 px-3 py-2 font-medium text-[#c7f4df]">5분 시작 가이드</Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="upload-journey mb-4">
+          {flowSteps.map((step, index) => (
+            <div key={step.title} className="upload-journey-step">
+              <span>0{index + 1}</span>
+              <strong>{step.title}</strong>
+              <p>{step.body}</p>
+            </div>
+          ))}
         </div>
 
         <div className="mb-4 grid gap-3 md:grid-cols-3">
@@ -113,16 +150,22 @@ export default function UploadPage() {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="font-medium">팩 입력</div>
-                <div className="text-muted">JSON을 붙여넣거나 파일을 불러오면 그대로 분석 API에 전달합니다.</div>
+                <div className="text-muted">샘플을 쓰거나, JSON을 붙여넣거나, 파일을 끌어다 놓으세요.</div>
               </div>
               <div className="flex gap-2">
-                <label className="inline-flex cursor-pointer items-center justify-center rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 font-medium text-[#f7f8f8] transition hover:bg-white/[0.07]">
-                  파일 선택
-                  <input className="hidden" type="file" accept=".json,application/json" onChange={handleFile} />
-                </label>
                 <Button onClick={loadSampleText}>샘플 바로 분석</Button>
               </div>
             </div>
+            <label
+              className="upload-dropzone mb-3"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={handleDrop}
+            >
+              <input className="hidden" type="file" accept=".json,application/json" onChange={handleFile} />
+              <span>{fileName ? "파일 준비 완료" : "JSON 파일 선택 또는 드롭"}</span>
+              <strong>{fileName || "LocalCrab에서 만든 후보 팩을 여기에 올려주세요."}</strong>
+              <em>현재 버전은 1MB 이하 JSON 파일을 분석합니다.</em>
+            </label>
             <textarea
               className="min-h-[420px] w-full rounded-xl border border-white/10 bg-black/20 p-4 font-mono text-[#d0d6e0] outline-none focus:border-[#7170ff]/60"
               placeholder={`예시:\n{\n  "id": "dog_ontology_pack",\n  "title": "Dog Behavior Ontology QA Sample",\n  "nodes": [],\n  "edges": [],\n  "evidence": []\n}`}
@@ -138,22 +181,29 @@ export default function UploadPage() {
 
           <aside className="card p-4">
             <div className="flex items-center justify-between gap-2">
-              <div className="font-medium">분석 설정</div>
+              <div className="font-medium">분석이 끝나면</div>
               <Pill tone="accent">현재 버전</Pill>
             </div>
-            <div className="mt-4 space-y-3 text-muted">
-              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>저장 방식</span><span>현재 탭에 임시 저장</span></div>
-              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>분석 방식</span><span>규칙 기반 분석</span></div>
-              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>LLM 분석</span><span>꺼짐</span></div>
-              <div className="flex justify-between"><span>상태</span><span>{status}</span></div>
+            <div className="mt-4 grid gap-2">
+              {analysisSteps.map((step, index) => (
+                <div key={step} className={`analysis-step ${isAnalyzing || status === "분석 완료" ? "is-active" : ""}`}>
+                  <span>0{index + 1}</span>
+                  <strong>{step}</strong>
+                </div>
+              ))}
             </div>
             <div className="mt-5 rounded-lg border border-white/[0.06] bg-white/[0.025] p-3 text-muted">
-              분석 결과로 신뢰도 점수, 사용 위험도, 확인 필요한 관계, 단정적인 관계, 편향 표현, Markdown 리포트를 보여줍니다.
+              결과 화면에서는 점수보다 먼저 “배포해도 되는지”, “무엇부터 고쳐야 하는지”, “왜 문제가 되는지”를 보여줍니다.
+            </div>
+            <div className="mt-3 space-y-2 text-muted">
+              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>저장 방식</span><span>현재 탭에 임시 저장</span></div>
+              <div className="flex justify-between border-b border-white/[0.06] pb-2"><span>분석 방식</span><span>규칙 기반 분석</span></div>
+              <div className="flex justify-between"><span>상태</span><span>{status}</span></div>
             </div>
             <div className="mt-3 rounded-lg border border-[#80e0bb]/20 bg-[#80e0bb]/5 p-3 text-muted">
               어떤 JSON을 넣어야 할지 모르겠다면 <Link href="/docs/basic-terms" className="text-[#80e0bb]">기본 용어</Link>와 <Link href="/docs/how-it-works" className="text-[#80e0bb]">작동 방식</Link>을 먼저 보세요.
             </div>
-            <Button className="mt-6 w-full border-[#7170ff]/40 bg-[#5e6ad2]" onClick={analyzePack} disabled={status === "분석 중"}>분석 시작</Button>
+            <Button className="mt-6 w-full border-[#7170ff]/40 bg-[#5e6ad2]" onClick={analyzePack} disabled={isAnalyzing}>{isAnalyzing ? "분석 중입니다" : "팩 검수 시작"}</Button>
           </aside>
         </div>
       </section>

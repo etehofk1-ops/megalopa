@@ -4,18 +4,24 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AppFrame } from "@/components/AppFrame";
-import { Button, MetricCard, Pill } from "@/components/ui";
+import { Button, Pill } from "@/components/ui";
 import { AnalyzeResult } from "@/lib/types";
 import { fallbackResult } from "@/lib/sample";
 import {
   componentLabel,
   componentPercent,
+  firstRepairLabel,
   gradeLabel,
   groupIssues,
+  issueImpact,
   issueCodeLabel,
   issueMessage,
+  issueWhy,
+  nextAction,
+  repairExample,
   issueSuggestion,
   recommendedUse,
+  reportVerdict,
   riskLabel,
   severityTone,
   targetTypeLabel,
@@ -36,6 +42,10 @@ export default function ReportPage() {
   const components = Object.entries(result.score.components || {});
   const groups = groupIssues(result.issues);
   const uses = recommendedUse(result);
+  const verdict = reportVerdict(result);
+  const topIssues = Array.from(
+    new Map([...groups.critical, ...groups.unsupported, ...groups.strong, ...groups.bias, ...result.issues].map((issue) => [issue.id, issue])).values()
+  ).slice(0, 3);
 
   async function copyMarkdown() {
     try {
@@ -77,16 +87,51 @@ export default function ReportPage() {
           </div>
         </div>
 
-        <div className="mb-4 grid gap-3 md:grid-cols-4">
-          <MetricCard label="신뢰도 점수" value={result.score.reliability_score} detail={gradeLabel(result.score.grade)} />
-          <MetricCard label="먼저 고칠 문제" value={groups.critical.length} detail="필수 확인" />
-          <MetricCard label="확인 필요" value={groups.unsupported.length} detail="관계 문제" />
-          <MetricCard label="편향 표현" value={groups.bias.length} detail="명명 문제" />
+        <div className="report-focus-grid mb-4">
+          <div className={`friendly-verdict report-verdict ${verdict.tone}`}>
+            <div>
+              <div className="verdict-eyebrow">{verdict.label}</div>
+              <h2>{verdict.title}</h2>
+              <p>{verdict.body}</p>
+            </div>
+            <div className="verdict-actions">
+              <div className="verdict-next">
+                <span>리포트 읽는 순서</span>
+                <strong>{firstRepairLabel(result)} 먼저</strong>
+              </div>
+              <Link href="/upload" className="verdict-link">다른 팩 분석하기</Link>
+            </div>
+          </div>
+
+          <aside className="card report-top-issues">
+            <div className="report-top-head">
+              <span>먼저 볼 항목</span>
+              <strong>{topIssues.length}건</strong>
+            </div>
+            <div className="report-top-list">
+              {topIssues.length ? topIssues.map((issue) => (
+                <div key={issue.id} className={`report-top-issue ${severityTone(issue.severity)}`}>
+                  <span>{issueCodeLabel(issue.code)}</span>
+                  <strong>{issueMessage(issue)}</strong>
+                  <em>{targetTypeLabel(issue.target_type)} {issue.target_id}</em>
+                </div>
+              )) : (
+                <div className="report-top-empty">큰 위험 항목은 보이지 않습니다. 마지막으로 출처와 사용 범위를 확인하세요.</div>
+              )}
+            </div>
+          </aside>
         </div>
 
-        <div className="mb-4 flex gap-2">
-          <button className={`rounded-md border px-3 py-2 ${view === "structured" ? "border-[#7170ff]/50 bg-[#7170ff]/10" : "border-white/10 bg-white/[0.03]"}`} onClick={() => setView("structured")} type="button">보기 쉽게 보기</button>
-          <button className={`rounded-md border px-3 py-2 ${view === "markdown" ? "border-[#7170ff]/50 bg-[#7170ff]/10" : "border-white/10 bg-white/[0.03]"}`} onClick={() => setView("markdown")} type="button">원문 리포트</button>
+        <div className="report-toolbar mb-4">
+          <div className="flex gap-2">
+            <button className={`rounded-md border px-3 py-2 ${view === "structured" ? "border-[#7170ff]/50 bg-[#7170ff]/10" : "border-white/10 bg-white/[0.03]"}`} onClick={() => setView("structured")} type="button">보기 쉽게 보기</button>
+            <button className={`rounded-md border px-3 py-2 ${view === "markdown" ? "border-[#7170ff]/50 bg-[#7170ff]/10" : "border-white/10 bg-white/[0.03]"}`} onClick={() => setView("markdown")} type="button">원문 리포트</button>
+          </div>
+          <div className="report-toolbar-stats">
+            <span>점수 {result.score.reliability_score}</span>
+            <span>{gradeLabel(result.score.grade)}</span>
+            <span>문제 {result.score.counts.issues}건</span>
+          </div>
         </div>
 
         {view === "markdown" ? (
@@ -94,8 +139,24 @@ export default function ReportPage() {
             <pre className="markdown-report">{result.markdown}</pre>
           </article>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-            <aside className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-4">
+              <div className="card p-4">
+                <div className="mb-3 font-medium">수정 우선순위</div>
+                <div className="repair-guide-grid">
+                  <RepairGuide title="먼저" count={groups.critical.length} body="배포 전에 반드시 확인해야 하는 구조와 근거 문제입니다." />
+                  <RepairGuide title="다음" count={groups.unsupported.length + groups.strong.length} body="관계 표현이 과하거나 근거가 약한 항목입니다." />
+                  <RepairGuide title="마지막" count={groups.bias.length} body="사용자가 오해할 수 있는 이름과 표현을 다듬습니다." />
+                </div>
+              </div>
+
+              <IssueSection title="먼저 고칠 문제" issues={groups.critical} />
+              <IssueSection title="확인 필요한 관계" issues={groups.unsupported} />
+              <IssueSection title="너무 단정적인 관계" issues={groups.strong} />
+              <IssueSection title="편향 표현" issues={groups.bias} />
+            </div>
+
+            <aside className="report-side-summary space-y-4">
               <div className="card p-4">
                 <div className="font-medium">점수 구성</div>
                 <div className="mt-4 space-y-3">
@@ -118,27 +179,20 @@ export default function ReportPage() {
                 </div>
               </div>
             </aside>
-
-            <div className="space-y-4">
-              <div className="card p-4">
-                <div className="mb-3 font-medium">수정 우선순위</div>
-                <div className="grid gap-2 md:grid-cols-2">
-                  <label className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3"><input className="mr-2" type="checkbox" readOnly />근거 없는 관계 보완</label>
-                  <label className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3"><input className="mr-2" type="checkbox" readOnly />강한 인과 관계 완화</label>
-                  <label className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3"><input className="mr-2" type="checkbox" readOnly />편향적 명명 수정</label>
-                  <label className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3"><input className="mr-2" type="checkbox" readOnly />출처 메타데이터 추가</label>
-                </div>
-              </div>
-
-              <IssueSection title="먼저 고칠 문제" issues={groups.critical} />
-              <IssueSection title="확인 필요한 관계" issues={groups.unsupported} />
-              <IssueSection title="너무 단정적인 관계" issues={groups.strong} />
-              <IssueSection title="편향 표현" issues={groups.bias} />
-            </div>
           </div>
         )}
       </section>
     </AppFrame>
+  );
+}
+
+function RepairGuide({ title, count, body }: { title: string; count: number; body: string }) {
+  return (
+    <div className="repair-guide">
+      <span>{title}</span>
+      <strong>{count}건</strong>
+      <p>{body}</p>
+    </div>
   );
 }
 
@@ -149,16 +203,48 @@ function IssueSection({ title, issues }: { title: string; issues: AnalyzeResult[
       {issues.length ? (
         <div className="space-y-2">
           {issues.map((issue) => (
-            <div key={issue.id} className={`rounded-lg border p-3 ${severityTone(issue.severity)}`}>
-              <div className="mb-1 flex flex-wrap justify-between gap-2"><span>{issueCodeLabel(issue.code)}</span><span>{targetTypeLabel(issue.target_type)}:{issue.target_id}</span></div>
-              <div>{issueMessage(issue)}</div>
-              <div className="mt-2 text-muted">제안: {issueSuggestion(issue)}</div>
-              {issue.suggested_relation ? <div className="mt-1 text-[#80e0bb]">추천 관계 표현: {issue.suggested_relation}</div> : null}
-              {issue.suggested_name ? <div className="mt-1 text-[#80e0bb]">추천 이름: {issue.suggested_name}</div> : null}
-            </div>
+            <FriendlyIssue key={issue.id} issue={issue} />
           ))}
         </div>
       ) : <div className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3 text-muted">이 항목에는 발견된 문제가 없습니다.</div>}
     </section>
+  );
+}
+
+function FriendlyIssue({ issue }: { issue: AnalyzeResult["issues"][number] }) {
+  const example = repairExample(issue);
+
+  return (
+    <article className={`friendly-issue rounded-lg border ${severityTone(issue.severity)}`}>
+      <div className="friendly-issue-head">
+        <div>
+          <span>{issueCodeLabel(issue.code)}</span>
+          <strong>{issueMessage(issue)}</strong>
+        </div>
+        <em>{targetTypeLabel(issue.target_type)} {issue.target_id}</em>
+      </div>
+      <div className="friendly-issue-grid">
+        <div>
+          <span>왜 중요한가요?</span>
+          <p>{issueWhy(issue)}</p>
+        </div>
+        <div>
+          <span>어떻게 고치나요?</span>
+          <p>{issueSuggestion(issue)}</p>
+        </div>
+        <div>
+          <span>다음 행동</span>
+          <p>{nextAction(issue)} · {issueImpact(issue)}</p>
+        </div>
+      </div>
+      {example ? (
+        <div className="friendly-issue-example">
+          <code>{example.before}</code>
+          <code>{example.after}</code>
+        </div>
+      ) : null}
+      {issue.suggested_relation ? <div className="mt-2 text-[#80e0bb]">추천 관계 표현: {issue.suggested_relation}</div> : null}
+      {issue.suggested_name ? <div className="mt-2 text-[#80e0bb]">추천 이름: {issue.suggested_name}</div> : null}
+    </article>
   );
 }

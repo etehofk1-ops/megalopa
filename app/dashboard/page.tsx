@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { clsx } from "clsx";
 import { AppFrame } from "@/components/AppFrame";
-import { MetricCard, Pill } from "@/components/ui";
+import { Pill } from "@/components/ui";
 import { AnalyzeResult, Issue } from "@/lib/types";
 import { fallbackResult } from "@/lib/sample";
 import {
@@ -11,10 +12,12 @@ import {
   componentPercent,
   gradeLabel,
   groupIssues,
+  firstRepairLabel,
   issueCodeLabel,
   issueMessage,
   issueSuggestion,
   recommendedUse,
+  reportVerdict,
   riskLabel,
   severityTone,
   targetTypeLabel,
@@ -45,11 +48,13 @@ export default function DashboardPage() {
   const components = Object.entries(result.score.components || {}).filter(([key]) => ["evidence_coverage", "relation_quality", "schema_consistency", "provenance_quality"].includes(key));
   const visibleIssues = issuesForFocus(issueFocus, result.issues, groups);
   const focusLabel = focusTitle(issueFocus);
-  const scoreReasons = [
-    groups.critical.length ? `먼저 고칠 문제 ${groups.critical.length}건` : "",
-    groups.unsupported.length ? `확인 필요한 관계 ${groups.unsupported.length}건` : "",
-    groups.strong.length ? `단정적 관계 ${groups.strong.length}건` : "",
-    groups.bias.length ? `편향 표현 ${groups.bias.length}건` : "",
+  const verdict = reportVerdict(result);
+  const reportHref = `/reports/${result.report_id ?? "sample"}`;
+  const scoreReasonSummary = [
+    groups.critical.length ? `먼저 ${groups.critical.length}` : "",
+    groups.unsupported.length ? `확인 ${groups.unsupported.length}` : "",
+    groups.strong.length ? `단정 ${groups.strong.length}` : "",
+    groups.bias.length ? `편향 ${groups.bias.length}` : "",
   ].filter(Boolean);
 
   function chooseFocus(nextFocus: IssueFocus) {
@@ -74,10 +79,23 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <RepairSteps issues={result.score.counts.issues} risk={result.score.risk_level} />
+        <div className={`friendly-verdict mb-4 ${verdict.tone}`}>
+          <div>
+            <div className="verdict-eyebrow">{verdict.label}</div>
+            <h2>{verdict.title}</h2>
+            <p>{verdict.body}</p>
+          </div>
+          <div className="verdict-actions">
+            <div className="verdict-next">
+              <span>가장 먼저 볼 곳</span>
+              <strong>{firstRepairLabel(result)}</strong>
+            </div>
+            <Link href={reportHref} className="verdict-link">상세 리포트 열기</Link>
+          </div>
+        </div>
 
-        <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-          <div className="card p-5">
+        <div className="summary-compact-grid mb-4">
+          <div className="card summary-score-panel">
             <div className="flex items-center gap-2 text-subtle">신뢰도 점수 <HelpTip text="0-100점 참고 지표입니다. 근거 연결, 관계 표현, 구조 일관성, 출처 신뢰도를 합쳐 계산합니다." /></div>
             <div className="mt-4 text-[46px] font-semibold leading-none text-[#f7f8f8]">{result.score.reliability_score}</div>
             <div className="mt-2 text-muted">사용 등급: {gradeLabel(result.score.grade)}</div>
@@ -91,116 +109,102 @@ export default function DashboardPage() {
               왜 이 점수인가요
             </button>
             {scoreOpen ? (
-              <div className="mt-3 rounded-lg border border-white/[0.06] bg-black/20 p-3">
-                <div className="font-medium text-[#f7f8f8]">{scoreReasons.length ? scoreReasons.join(", ") : "큰 위험 신호가 없습니다."}</div>
-                <p className="mt-1 text-muted">현재 등급은 {gradeLabel(result.score.grade)}이며, 자동판단보다는 사람이 먼저 검토하는 흐름이 적합합니다.</p>
+              <div className="score-explanation-popover" role="note">
+                <div className="font-medium text-[#f7f8f8]">{scoreReasonSummary.length ? scoreReasonSummary.join(" · ") : "큰 위험 신호 없음"}</div>
+                <p className="mt-1 text-muted">{gradeLabel(result.score.grade)} 등급입니다. 수동 검토 후 사용하세요.</p>
               </div>
             ) : null}
-            <div className="mt-5 space-y-2">
-              {recommendedUse(result).map((item) => (
-                <div key={item.label} className="flex justify-between gap-3 border-b border-white/[0.06] pb-2 last:border-0"><span className="text-muted">{item.label}</span><span>{item.value}</span></div>
-              ))}
-            </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <MetricCard label="노드" value={result.score.counts.nodes} detail="분석됨" />
-            <MetricCard label="관계" value={result.score.counts.edges} detail="분석됨" />
-            <FocusMetric label="확인 필요" value={groups.unsupported.length} detail="관계 문제" help="근거가 없거나 표준 관계 표현이 아닌 항목입니다." active={issueFocus === "unsupported"} onClick={() => chooseFocus("unsupported")} />
-            <FocusMetric label="편향 표현" value={groups.bias.length} detail="명명 문제" help="낙인, 혐오, 과잉 일반화로 읽힐 수 있는 이름입니다." active={issueFocus === "bias"} onClick={() => chooseFocus("bias")} />
-            <FocusMetric label="먼저 고칠 문제" value={groups.critical.length} detail="필수 확인" help="공개 배포나 자동 판단 전에 먼저 처리해야 할 항목입니다." active={issueFocus === "critical"} onClick={() => chooseFocus("critical")} />
-            <FocusMetric label="단정적 관계" value={groups.strong.length} detail="표현 완화 필요" help="causes처럼 확실하게 단정하는 관계 표현입니다." active={issueFocus === "strong"} onClick={() => chooseFocus("strong")} />
-            <MetricCard label="근거" value={result.score.counts.evidence} detail="개" />
-            <FocusMetric label="전체 문제" value={result.score.counts.issues} detail="발견됨" help="분석에서 발견한 모든 검토 항목입니다." active={issueFocus === "all"} onClick={() => chooseFocus("all")} />
+          <div className="card summary-signal-panel">
+            <div className="summary-signal-header">
+              <span>핵심 신호</span>
+              <strong>{result.score.counts.issues}건 발견</strong>
+            </div>
+            <div className="summary-signal-list">
+              <button type="button" className={clsx("summary-signal", issueFocus === "critical" && "is-active")} onClick={() => chooseFocus("critical")}>
+                <span>먼저 고칠 문제</span>
+                <strong>{groups.critical.length}건</strong>
+                <em>배포 전 필수 확인</em>
+              </button>
+              <button type="button" className={clsx("summary-signal", issueFocus === "unsupported" && "is-active")} onClick={() => chooseFocus("unsupported")}>
+                <span>확인 필요한 관계</span>
+                <strong>{groups.unsupported.length}건</strong>
+                <em>근거 또는 표현 확인</em>
+              </button>
+              <button type="button" className={clsx("summary-signal", issueFocus === "strong" && "is-active")} onClick={() => chooseFocus("strong")}>
+                <span>단정적 관계</span>
+                <strong>{groups.strong.length}건</strong>
+                <em>관계 표현 완화</em>
+              </button>
+            </div>
+            <div className="summary-mini-stats">
+              <span>노드 {result.score.counts.nodes}</span>
+              <span>관계 {result.score.counts.edges}</span>
+              <span>근거 {result.score.counts.evidence}</span>
+              <button type="button" onClick={() => chooseFocus("all")}>전체 보기</button>
+            </div>
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
-          <div className="card p-5">
-            <div className="mb-4 font-medium">점수 구성</div>
-            <div className="space-y-4">
-              {components.map(([key, value]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={clsx("component-row w-full rounded-md p-2 text-left transition", issueFocus === `component:${key}` ? "is-active" : "")}
-                  onClick={() => chooseFocus(`component:${key}`)}
-                  title={componentHint(key)}
-                >
-                  <div className="mb-1 flex justify-between gap-3 text-muted"><span className="inline-flex items-center gap-2">{componentLabel(key)} <HelpTip text={componentExplanation(key)} /></span><span>{value}</span></div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]"><div className="h-full rounded-full bg-[#7170ff]" style={{ width: `${componentPercent(key, Number(value))}%` }} /></div>
-                  <div className="mt-1 flex justify-between gap-3 text-subtle"><span>{componentHint(key)}</span><span>{componentIssueCount(key, result.issues)}건</span></div>
-                </button>
-              ))}
+        <div className="card p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <span className="font-medium">수정 우선순위</span>
+            <div className="flex items-center gap-2">
+              <span className="text-muted">{focusLabel}</span>
+              {issueFocus !== "all" ? (
+                <button type="button" className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-muted transition hover:bg-white/[0.06]" onClick={() => chooseFocus("all")}>전체 보기</button>
+              ) : null}
             </div>
           </div>
+          <div className="grid gap-2">
+            {visibleIssues.slice(0, 4).map((issue) => (
+              <IssueCard
+                key={issue.id}
+                issue={issue}
+                expanded={expandedIssueId === issue.id}
+                onToggle={() => setExpandedIssueId((current) => current === issue.id ? null : issue.id)}
+              />
+            ))}
+            {!result.issues.length ? <div className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3 text-muted">분석 결과가 없습니다. 분석하기 화면에서 샘플 팩을 분석하세요.</div> : null}
+            {result.issues.length && !visibleIssues.length ? <div className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3 text-muted">이 범위에는 발견된 문제가 없습니다.</div> : null}
+          </div>
+        </div>
 
-          <div className="card p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium">수정 우선순위</span>
-              <div className="flex items-center gap-2">
-                <span className="text-muted">{focusLabel}</span>
-                {issueFocus !== "all" ? (
-                  <button type="button" className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-muted transition hover:bg-white/[0.06]" onClick={() => chooseFocus("all")}>전체 보기</button>
-                ) : null}
+        <details className="advanced-score-details mt-4">
+          <summary>고급 점수와 사용 범위 보기</summary>
+          <div className="advanced-score-grid">
+            <div>
+              <div className="mb-4 font-medium">점수 구성</div>
+              <div className="space-y-4">
+                {components.map(([key, value]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={clsx("component-row w-full rounded-md p-2 text-left transition", issueFocus === `component:${key}` ? "is-active" : "")}
+                    onClick={() => chooseFocus(`component:${key}`)}
+                    title={componentHint(key)}
+                  >
+                    <div className="mb-1 flex justify-between gap-3 text-muted"><span className="inline-flex items-center gap-2">{componentLabel(key)} <HelpTip text={componentExplanation(key)} /></span><span>{value}</span></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]"><div className="h-full rounded-full bg-[#7170ff]" style={{ width: `${componentPercent(key, Number(value))}%` }} /></div>
+                    <div className="mt-1 flex justify-between gap-3 text-subtle"><span>{componentHint(key)}</span><span>{componentIssueCount(key, result.issues)}건</span></div>
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="grid gap-2">
-              {visibleIssues.slice(0, 6).map((issue) => (
-                <IssueCard
-                  key={issue.id}
-                  issue={issue}
-                  expanded={expandedIssueId === issue.id}
-                  onToggle={() => setExpandedIssueId((current) => current === issue.id ? null : issue.id)}
-                />
-              ))}
-              {!result.issues.length ? <div className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3 text-muted">분석 결과가 없습니다. 분석하기 화면에서 샘플 팩을 분석하세요.</div> : null}
-              {result.issues.length && !visibleIssues.length ? <div className="rounded-lg border border-white/[0.06] bg-white/[0.025] p-3 text-muted">이 범위에는 발견된 문제가 없습니다.</div> : null}
+            <div>
+              <div className="mb-4 font-medium">추천 사용 범위</div>
+              <div className="space-y-2">
+                {recommendedUse(result).map((item) => (
+                  <div key={item.label} className="flex justify-between gap-3 border-b border-white/[0.06] pb-2 last:border-0"><span className="text-muted">{item.label}</span><span>{item.value}</span></div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </details>
         <StatusToast message={toast} />
       </section>
     </AppFrame>
-  );
-}
-
-function FocusMetric({ label, value, detail, help, active, onClick }: { label: string; value: string | number; detail: string; help: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      className={clsx("card interactive-card p-4 text-left", active && "is-active")}
-      onClick={onClick}
-      aria-pressed={active}
-    >
-      <div className="flex items-center gap-2 text-subtle">{label}<HelpTip text={help} /></div>
-      <div className="mt-3 font-semibold text-[#f7f8f8]">{value}</div>
-      <div className="mt-1 text-muted">{detail}</div>
-    </button>
-  );
-}
-
-function RepairSteps({ issues, risk }: { issues: number; risk: string }) {
-  const steps = [
-    { label: "분석 완료", detail: "팩 구조 확인", done: true },
-    { label: "위험 확인", detail: `위험도 ${riskLabel(risk)}`, done: true },
-    { label: "문제 수정", detail: issues ? `${issues}건 남음` : "필요 없음", done: issues === 0 },
-    { label: "재분석", detail: issues ? "수정 후 권장" : "완료 가능", done: false },
-  ];
-
-  return (
-    <div className="repair-steps mb-4 grid gap-2 md:grid-cols-4">
-      {steps.map((step, index) => (
-        <div key={step.label} className={clsx("repair-step rounded-lg border p-3", step.done && "is-done", !step.done && index === 2 && issues > 0 && "is-current")}>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-subtle">0{index + 1}</span>
-            <span className="step-dot" />
-          </div>
-          <div className="mt-2 font-medium text-[#f7f8f8]">{step.label}</div>
-          <div className="mt-1 text-muted">{step.detail}</div>
-        </div>
-      ))}
-    </div>
   );
 }
 
