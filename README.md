@@ -10,7 +10,7 @@ Megalopa는 LocalCrab에서 만든 온톨로지 후보 팩을 OpenCrab에 배포
 
 Megalopa는 알렉스님의 OpenCrab 생태계와 연결되는 사전 검수 도구입니다.
 
-- Creator / OpenCrab maintainer: @AlexAI-MCP
+- Creator / OpenCrab maintainer: [@AlexAI-MCP](https://github.com/AlexAI-MCP)
 - OpenCrab SaaS: [opencrab.sh](https://opencrab.sh)
 - OpenCrab repository: [AlexAI-MCP/OpenCrab](https://github.com/AlexAI-MCP/OpenCrab)
 
