@@ -30,6 +30,7 @@ export const guideGroups = [
     title: "핵심 기능",
     pages: [
       { slug: "how-it-works", title: "작동 방식" },
+      { slug: "technology", title: "기술과 검수 기준" },
       { slug: "read-report", title: "리포트 읽는 법" },
       { slug: "repair-pack", title: "팩 고치는 법" },
     ],
@@ -142,6 +143,7 @@ export const guidePages: Record<string, GuidePage> = {
         type: "cards",
         items: [
           { title: "작동 방식 이해하기", body: "Megalopa가 팩을 어떤 순서로 검사하는지 봅니다.", href: "/docs/how-it-works" },
+          { title: "기술과 검수 기준", body: "점수가 어떤 기술 흐름과 규칙에서 나오는지 확인합니다.", href: "/docs/technology" },
           { title: "리포트 읽는 법", body: "점수, 위험도, 이슈 그룹을 해석하는 기준입니다.", href: "/docs/read-report" },
         ],
       },
@@ -222,6 +224,87 @@ Megalopa는 입력된 JSON 팩을 파싱한 뒤 구조, 근거, 관계, 편향, 
         type: "note",
         title: "현재 버전의 범위",
         body: "현재는 규칙 기반 분석이 중심입니다. LLM 기반 claim splitter나 relation risk analyzer는 다음 단계에서 붙이기 좋은 영역입니다.",
+      },
+      {
+        type: "cards",
+        items: [
+          { title: "기술과 검수 기준", body: "분석이 어떤 기술 스택과 규칙으로 돌아가는지 자세히 봅니다.", href: "/docs/technology" },
+          { title: "리포트 읽는 법", body: "점수보다 먼저 봐야 할 위험 신호를 확인합니다.", href: "/docs/read-report" },
+        ],
+      },
+    ],
+  },
+  technology: {
+    slug: "technology",
+    category: "핵심 기능",
+    title: "기술과 검수 기준",
+    summary: "Megalopa가 어떤 기술 구성으로 팩을 읽고, 어떤 규칙으로 검수하는지 설명합니다.",
+    progressLabel: "검수 신뢰 기준",
+    markdown: `# 기술과 검수 기준
+
+Megalopa의 점수는 블랙박스 AI가 감으로 매기는 숫자가 아닙니다. 현재 버전은 입력된 JSON 팩을 규칙 기반 분석기로 검사하고, 근거와 관계의 위험도를 사람이 확인할 수 있는 리포트로 바꿉니다.`,
+    blocks: [
+      {
+        type: "paragraph",
+        text: "Megalopa는 OpenCrab에 올리기 전 후보 팩을 점검하는 사전 검수 레이어입니다. 그래서 목표는 팩의 모든 내용이 참인지 판정하는 것이 아니라, 이 팩을 어디까지 믿고 써도 되는지 판단할 단서를 주는 것입니다.",
+      },
+      { type: "heading", text: "현재 기술 스택" },
+      {
+        type: "list",
+        items: [
+          "Next.js App Router: 랜딩, 업로드, 가이드, 대시보드, 리포트 화면을 구성합니다.",
+          "TypeScript API Route: 업로드된 JSON을 분석기로 넘기고 결과를 화면에서 읽을 수 있는 형태로 돌려줍니다.",
+          "Python Analyzer: 팩 파싱, 스키마 검증, 관계 규칙, 근거 연결, 출처 품질, 편향 명명을 검사합니다.",
+          "JSON Schema: 팩, 이슈, 리포트가 어떤 구조를 가져야 하는지 계약을 정의합니다.",
+          "Pytest: 샘플 팩이 같은 규칙으로 안정적으로 분석되는지 확인합니다.",
+          "Session Storage: 분석 결과를 현재 브라우저 탭에 임시 저장해 리포트 화면으로 이어줍니다.",
+        ],
+      },
+      { type: "heading", text: "검수는 어떤 순서로 되나요?" },
+      {
+        type: "steps",
+        items: [
+          "입력된 JSON을 읽고 노드, 관계, 근거 목록을 분리합니다.",
+          "필수 필드, 중복 노드, 존재하지 않는 노드를 가리키는 관계를 검사합니다.",
+          "노드와 관계가 evidence_ids로 근거를 연결하고 있는지 확인합니다.",
+          "causes, proves, always_leads_to처럼 너무 강한 관계 표현을 경고합니다.",
+          "unknown, llm_generated처럼 추적하기 어려운 출처를 약한 출처로 표시합니다.",
+          "낙인이나 과잉 일반화로 읽힐 수 있는 이름을 찾아 중립적인 표현으로 바꾸도록 제안합니다.",
+          "위 결과를 점수, 위험도, 수정 우선순위, Markdown 리포트로 정리합니다.",
+        ],
+      },
+      { type: "heading", text: "점수는 무엇을 보나요?" },
+      {
+        type: "list",
+        items: [
+          "근거 연결률: 노드와 관계가 근거를 갖고 있는지 봅니다.",
+          "관계 표현 안정성: 표준 관계인지, 너무 단정적인 관계인지 봅니다.",
+          "구조 일관성: 필수 필드, 중복, 잘못된 참조가 있는지 봅니다.",
+          "출처 신뢰도: 공식 문서, 논문, 책, 기사처럼 추적 가능한 출처인지 봅니다.",
+          "현재 일부 항목은 기본값으로 계산됩니다. 그래서 점수만 보지 말고 위험도와 먼저 고칠 문제를 함께 봐야 합니다.",
+        ],
+      },
+      { type: "heading", text: "왜 신뢰할 수 있나요?" },
+      {
+        type: "list",
+        items: [
+          "같은 입력에는 같은 결과가 나오는 결정적 규칙을 우선 사용합니다.",
+          "각 경고는 어떤 노드나 관계가 문제인지 대상과 이유를 함께 보여줍니다.",
+          "진실 여부를 단정하지 않고, 사용 위험도와 수정 필요성을 분리해서 보여줍니다.",
+          "LLM 추론은 현재 기본 판정 경로가 아닙니다. 추후 붙이더라도 근거 추출과 관계 위험 보조 역할로 두는 편이 안전합니다.",
+        ],
+      },
+      {
+        type: "note",
+        title: "사용자가 알아야 할 한계",
+        body: "Megalopa는 도메인 전문가를 대체하지 않습니다. 법률, 의료, 금융처럼 영향이 큰 팩은 점수가 높아도 사람이 근거와 표현을 다시 확인해야 합니다.",
+      },
+      {
+        type: "cards",
+        items: [
+          { title: "작동 방식", body: "팩이 리포트로 바뀌는 전체 흐름을 봅니다.", href: "/docs/how-it-works" },
+          { title: "리포트 읽는 법", body: "점수, 위험도, 수정 우선순위를 해석합니다.", href: "/docs/read-report" },
+        ],
       },
     ],
   },
