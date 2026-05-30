@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import ogImage from "./asset/megalopa-wordmark-dark_2.png";
 import "./globals.css";
 
 const description =
   "LocalCrab에서 만든 온톨로지 팩을 OpenCrab에 배포하기 전 검수하고 정제하는 사전 감사 단계.";
+const ogImageUrl = "/og/megalopa-wordmark-dark-2.png?v=2";
 
 export const metadata: Metadata = {
   title: "Megalopa",
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: ogImage.src,
-        width: ogImage.width,
-        height: ogImage.height,
+        url: ogImageUrl,
+        width: 1280,
+        height: 960,
         alt: "Megalopa Ontology QA Layer",
       },
     ],
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Megalopa",
     description,
-    images: [ogImage.src],
+    images: [ogImageUrl],
   },
 };
 
